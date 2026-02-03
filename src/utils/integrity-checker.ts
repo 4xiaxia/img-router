@@ -9,8 +9,27 @@
  * 4. 验证依赖项配置
  */
 
-import { exists } from "@std/fs";
-import { join } from "@std/path";
+/**
+ * 检查文件或目录是否存在
+ */
+async function exists(path: string, options?: { isDirectory?: boolean }): Promise<boolean> {
+  try {
+    const stat = await Deno.stat(path);
+    if (options?.isDirectory) {
+      return stat.isDirectory;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 拼接路径
+ */
+function join(...paths: string[]): string {
+  return paths.join("/").replace(/\/+/g, "/");
+}
 
 /**
  * 检查结果接口
