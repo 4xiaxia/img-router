@@ -19,9 +19,10 @@ import {
   type RuntimeConfig,
   type SystemConfig,
 } from "./config/manager.ts";
-import { closeLogger, configureLogger, info, initLogger, LogLevel } from "./core/logger.ts";
+import { closeLogger, configureLogger, info, initLogger, LogLevel, warn } from "./core/logger.ts";
 import { providerRegistry } from "./providers/registry.ts";
 import type { ProviderName } from "./providers/base.ts";
+import { runIntegrityCheck } from "./utils/integrity-checker.ts";
 
 // ==========================================
 // 1. 初始化阶段
@@ -29,6 +30,24 @@ import type { ProviderName } from "./providers/base.ts";
 
 // 初始化日志系统
 await initLogger();
+
+// 运行项目完整性检查（仅在启动时进行基础检查）
+// 检查命令行参数是否包含 --skip-integrity-check 来跳过检查
+const skipIntegrityCheck = Deno.args.includes("--skip-integrity-check");
+if (!skipIntegrityCheck) {
+  try {
+    const integrityReport = await runIntegrityCheck();
+    if (!integrityReport.isHealthy) {
+      warn("Integrity", `项目完整性检查发现 ${integrityReport.failed} 个问题`);
+      warn("Integrity", "使用 'deno task check' 查看详细报告");
+      warn("Integrity", "若要跳过此检查，请添加 --skip-integrity-check 参数");
+    } else {
+      info("Integrity", "✅ 项目完整性检查通过");
+    }
+  } catch (e) {
+    warn("Integrity", `完整性检查失败: ${e}`);
+  }
+}
 
 // 同步 Provider 启用状态
 // 根据运行时配置 (runtime.json) 初始化 ProviderRegistry 中的 Provider 状态
